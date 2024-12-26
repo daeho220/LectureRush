@@ -56,29 +56,6 @@ export class RegistrationRepositoryImpl implements RegistrationRepository {
                 relations: ['lecture'],
             });
         });
-
-        // lecture 객체를 먼저 조회
-        const lecture = await this.lectureRepository.findOne({
-            where: { id: lectureId },
-        });
-
-        if (!lecture) {
-            throw new Error('해당 강의를 찾을 수 없습니다.');
-        }
-
-        const now = new Date();
-
-        const registration = await this.registrationRepository.save({
-            userId,
-            lecture,
-            registrationDate: now,
-        });
-
-        // 저장 후 lecture 관계를 포함하여 조회
-        return this.registrationRepository.findOne({
-            where: { registrationId: registration.registrationId },
-            relations: ['lecture'],
-        });
     }
 
     // 특정 유저 수강신청 완료 목록 조회
