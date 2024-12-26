@@ -28,8 +28,4 @@ export class Lecture {
 
     @Column({ name: 'is_available', default: true })
     isAvailable: boolean;
-
-    isCapacityAvailable(): boolean {
-        return this.currentCount < this.maxCount;
-    }
 }

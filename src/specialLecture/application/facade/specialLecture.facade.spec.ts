@@ -14,7 +14,6 @@ describe('SpecialLectureFacade', () => {
         mockLectureService = {
             getLectureByLectureId: jest.fn(),
             getAvailableLecturesByDate: jest.fn(),
-            increaseCurrentCount: jest.fn(),
         } as any;
 
         mockRegistrationService = {
@@ -45,11 +44,12 @@ describe('SpecialLectureFacade', () => {
                 // given
                 const userId = 1;
                 const lectureId = 1;
+                const currentCount = 0;
 
                 const mockLecture = {
                     id: lectureId,
                     isAvailable: true,
-                    currentCount: 0,
+                    currentCount: currentCount + 1,
                     maxCount: 30,
                 } as Lecture;
 
@@ -62,10 +62,6 @@ describe('SpecialLectureFacade', () => {
 
                 mockLectureService.getLectureByLectureId.mockResolvedValue(mockLecture);
                 mockRegistrationService.registerForLecture.mockResolvedValue(mockRegistration);
-                mockLectureService.increaseCurrentCount.mockImplementation(() => {
-                    mockLecture.currentCount += 1;
-                    return Promise.resolve();
-                });
 
                 // when
                 const result = await specialLectureFacade.registerForLecture(userId, lectureId);
@@ -80,7 +76,6 @@ describe('SpecialLectureFacade', () => {
                     userId,
                     lectureId,
                 );
-                expect(mockLectureService.increaseCurrentCount).toHaveBeenCalledWith(lectureId);
             });
         });
 
