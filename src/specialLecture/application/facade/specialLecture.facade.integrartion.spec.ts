@@ -370,5 +370,24 @@ describe('SpecialLectureFacade Integration Test', () => {
             expect(failedRegistrations1.length + failedRegistrations2.length).toBe(10);
             expect(lectureListResults.length).toBe(3);
         });
+        it('같은 유저가 동시에 동일한 강의에 5번 신청하는 경우, 1번만 성공하고 4번은 실패하는 테스트', async () => {
+            // given
+            const userId = 999;
+            const lectureId = 5;
+
+            // when
+            const results = await Promise.allSettled(
+                Array.from({ length: 5 }, () =>
+                    specialLectureFacade.registerForLecture(userId, lectureId),
+                ),
+            );
+
+            // then
+            const successfulRegistrations = results.filter((r) => r.status === 'fulfilled');
+            const failedRegistrations = results.filter((r) => r.status === 'rejected');
+
+            expect(successfulRegistrations.length).toBe(1);
+            expect(failedRegistrations.length).toBe(4);
+        });
     });
 });

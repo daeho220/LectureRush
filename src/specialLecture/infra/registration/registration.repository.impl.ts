@@ -18,44 +18,51 @@ export class RegistrationRepositoryImpl implements RegistrationRepository {
     async addRegistration(userId: number, lectureId: number): Promise<Registration> {
         this.validateUserId(userId);
         this.validateLectureId(lectureId);
+        try {
+            return await this.dataSource.transaction(async (manager) => {
+                // lecture 객체를 조회하고 잠금 설정
+                const lecture = await manager.findOne(Lecture, {
+                    where: { id: lectureId },
+                    lock: { mode: 'pessimistic_write' }, // 쓰기 잠금
+                });
 
-        return await this.dataSource.transaction(async (manager) => {
-            // lecture 객체를 조회하고 잠금 설정
-            const lecture = await manager.findOne(Lecture, {
-                where: { id: lectureId },
-                lock: { mode: 'pessimistic_write' }, // 쓰기 잠금
+                if (!lecture) {
+                    throw new Error('해당 강의를 찾을 수 없습니다.');
+                }
+
+                if (lecture.isAvailable === false) {
+                    throw new Error('수강 신청이 마감되었습니다.');
+                }
+
+                const now = new Date();
+
+                // 등록 정보 저장
+                const registration = await manager.save(Registration, {
+                    userId,
+                    lecture,
+                    registrationDate: now,
+                });
+
+                // 강의의 현재 인원 증가
+                lecture.currentCount += 1;
+                if (lecture.currentCount >= lecture.maxCount) {
+                    lecture.isAvailable = false;
+                }
+                await manager.save(lecture);
+
+                // 저장 후 lecture 관계를 포함하여 조회
+                return manager.findOne(Registration, {
+                    where: { registrationId: registration.registrationId },
+                    relations: ['lecture'],
+                });
             });
-
-            if (!lecture) {
-                throw new Error('해당 강의를 찾을 수 없습니다.');
+        } catch (error) {
+            if (error.code === 'ER_DUP_ENTRY') {
+                // MySQL의 유니크 제약 조건 위반 에러 코드
+                throw new Error('이미 수강 신청한 강의입니다.');
             }
-
-            if (lecture.isAvailable === false) {
-                throw new Error('수강 신청이 마감되었습니다.');
-            }
-
-            const now = new Date();
-
-            // 등록 정보 저장
-            const registration = await manager.save(Registration, {
-                userId,
-                lecture,
-                registrationDate: now,
-            });
-
-            // 강의의 현재 인원 증가
-            lecture.currentCount += 1;
-            if (lecture.currentCount >= lecture.maxCount) {
-                lecture.isAvailable = false;
-            }
-            await manager.save(lecture);
-
-            // 저장 후 lecture 관계를 포함하여 조회
-            return manager.findOne(Registration, {
-                where: { registrationId: registration.registrationId },
-                relations: ['lecture'],
-            });
-        });
+            throw error;
+        }
     }
 
     // 특정 유저 수강신청 완료 목록 조회
